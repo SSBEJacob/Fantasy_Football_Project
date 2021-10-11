@@ -1,0 +1,30 @@
+---
+title: "Gather PBP Data"
+output: html_notebook
+---
+
+```{r}
+library(nflfastR)
+library(tidyr)
+```
+
+
+#Downloads all NFL plays that have happened between 1999-2021
+```{r}
+future::plan("multisession")
+parallelPBP <-nflfastR::load_pbp(1999:2021)
+```
+
+```{r}
+write.csv(parallelPBP, "../data/full_pbp.csv")
+```
+
+#Removes all plays that aren't from the regular season
+```{r}
+    data <- parallelPBP %>%
+      dplyr::filter(parallelPBP$season_type %in% c("REG"))
+```
+
+```{r}
+write.csv(data, "../data/regular_season_pbp.csv")
+```

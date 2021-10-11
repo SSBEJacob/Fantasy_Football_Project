@@ -1,0 +1,46 @@
+---
+title: "Projecting Fantasy Points"
+output: html_document
+---
+
+```{r}
+library(foreign)
+library(tidyr)
+library(jtools)
+library(scales)
+```
+
+```{r}
+fantasy_df <- read.csv("../data/weekly_fantasy_points.csv")
+fantasy_df = fantasy_df[,!(names(fantasy_df) %in% c("X","X.1"))]
+points_df <-read.csv("../data/points.csv")
+points_df = points_df[,!(names(points_df) %in% c("X"))]
+sum_cols <- c(names(points_df),"FPoints")
+
+```
+
+```{r}
+season_df <- fantasy_df%>%
+  dplyr::group_by(PlayerID,season, position,team,full_name,age)%>%
+   dplyr::summarise_at(sum_cols, sum, na.rm=TRUE) %>%
+  dplyr::ungroup()
+```
+
+```{r}
+season_df$age2 <- season_df$age^2
+```
+
+```{r}
+pdf("../results/Age_FPoints.pdf")
+plot(season_df$age,season_df$FPoints,xlab = 'Players Age',ylab = 'Fantasy Points',xlim = c(20,50),col=rgb(.6,0,0,0.065),pch=16)
+dev.off()
+```
+
+```{r}
+fixed.dum <- lm(formula = FPoints ~ age + age2 +factor(position) + factor(PlayerID),data = season_df)
+```
+
+```{r}
+summary(fixed.dum)
+export_summs(fixed.dum,model.names="pos_Id_FE",coefs=c("age","age2","factor(position)CB","factor(position)DB","factor(position)DE","factor(position)DL","factor(position)DT","factor(position)FB","factor(position)FS","factor(position)G","factor(position)HB","factor(position)ILB","factor(position)K","factor(position)LB","factor(position)LS","factor(position)MLB","factor(position)NT","factor(position)OG","factor(position)OL","factor(position)OLB","factor(position)OT","factor(position)P","factor(position)QB","factor(position)RB","factor(position)SAF","factor(position)SS","factor(position)T","factor(position)TE","factor(position)WR"),to.file="html",file.name="../results/regression_results.html")
+```
