@@ -10,6 +10,8 @@ library(jtools)
 library(scales)
 ```
 
+
+#We finish by testing to see what effects age and what position you play have on your fantasy point production.
 ```{r}
 fantasy_df <- read.csv("../data/weekly_fantasy_points.csv")
 fantasy_df = fantasy_df[,!(names(fantasy_df) %in% c("X","X.1"))]
@@ -30,12 +32,16 @@ season_df <- fantasy_df%>%
 season_df$age2 <- season_df$age^2
 ```
 
+#Here we are printing out a scatter plot of every player in the dataset with the X axis showing how old they are and the Y axis showing how many fantasy points they scored.
 ```{r}
 pdf("../results/Age_FPoints.pdf")
 plot(season_df$age,season_df$FPoints,xlab = 'Players Age',ylab = 'Fantasy Points',xlim = c(20,50),col=rgb(.6,0,0,0.065),pch=16)
 dev.off()
 ```
 
+
+#Here we are running a fixed effects model on the data to see what the coefficients of age and age^2 are. 
+#We include age^2 because the graph of the relationship between age and fantasy points shows a downward facing parabola.
 ```{r}
 fixed.dum <- lm(formula = FPoints ~ age + age2 +factor(position) + factor(PlayerID),data = season_df)
 ```
