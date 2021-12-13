@@ -1,0 +1,113 @@
+---
+title: "Fantasy Footbal Model"
+author: "Jacob Cohn"
+date: "12/10/2021"
+output:
+  html_document:
+    df_print: paged
+---
+##Introduction
+Millions of people compete against their friends in fantasy sports every year. In fantasy football, a group of about twelve people will take turns selecting professional football players to add to their roster. They then use those rosters to compete against each other by seeing whose roster scores more fantasy points over the course of a week.
+
+##Objective Statement
+The purpose of this project is to generate a model that will help predict fantasy point production of players given their age and their position. To get enough data to run a sufficient model, every play from every NFL game since 2001 is being included. A majority of this project is focused on cleaning and managing the data to easily run the model. This is because future projects will rely heavily on the data being created from this project. The following report will be broken into Data Cleaning, Fantasy Point Calculation, and Analysis.
+
+##Data Cleaning
+#Gathering PBP Data
+The first step in this project is to gather the records of every football play that has happened over the time period we are interested in, which can be acquired through nflfastR. This code will write every play into a csv, however the playoff games have been removed since they will bias our analysis. There are hundreds of columns that will need to be parsed but the first few rows of the description column has been displayed to show that we will be dealing with different play types, players, and yardage amounts.
+
+```{r}
+source("src/gather_pbp.R")
+head(data$desc,n=5)
+rm(list=ls())
+```
+
+#Gathering Rosters
+Next we need to gather the roster data for all the players in the years that we are interested in. The roster will provide the data that will serve as our dependent variables such as position and age.
+
+```{r}
+source("src/gather_roster.R")
+head(rosters[,7:12],n=5)
+rm(list=ls())
+```
+
+#Aggreagting PBP Data
+The aggregate_pbp.R script does most of the heavy lifting for this project. It is being run in the Rmd file but is not shown in the report because the script produces tons of checks and messages that would clutter the report. Currently the data is a list of descriptions of football plays. What the R script is doing is converting those descriptions into countable statistics that will then be summed up for each player.  If we check the first few columns we will see that the number of assists for a couple of different players in a given week has been calculated but we currently don't know the players name yet.
+```{r,include=FALSE}
+source("src/aggregate_pbp.R")
+rm(list=ls())
+```
+```{r}
+summary_stats<-read.csv("data/summary_statistics.csv")
+head(summary_stats[,2:5],n=5)
+rm(list=ls())
+```
+
+#Combining Roster Data and Summary Statistics
+To get the  names of the players whose stats are given in the table above, we need to merge the stats with the roster by PlayerID. This code looks up the PlayerID's and adds the appropriate name, team, height, weight, etc. It also calculates each player's age based on their birthday and what the year was in the season they were playing.
+
+```{r}
+source("src/combine_stats_and_roster.R")
+head(filled_stats[,c(1,2,3,4,5,9,63)],n=5)
+rm(list=ls())
+```
+
+##Calculating Fantasy Points
+Now that we have the data in a neat and understandable format, it's time to calculate how many fantasy points each player scored. This section of code is dependent on two files. The first is the weekly_fantasy_points.csv file that we created in the data folder during the last function. The second is the points.csv which says how many fantasy points each play is worth. This function will multiply each players stats by how much that stat is worth. All those values are then summed up into the FPoints column to denote how many Fantasy Points the player scored that week. Below is a subset of the data to show what Fantasy Points production looks like in a given week.
+```{r}
+source("src/calculate_Fantasy_Points.R")
+head(weekly_sums_df[,c(2,3,4,5,6,10,66)],n=5)
+rm(list=ls())
+```
+
+##Analysis
+
+```{r,include=FALSE}
+library(foreign)
+library(tidyr)
+library(scales)
+library(jtools)
+library(huxtable)
+```
+
+
+We finish by testing to see what effects age and position you play have on your fantasy point production. So, we will load in the weekly fantasy point statistics that we generated in the last function and sum up their production for the full year.
+```{r,include=FALSE}
+fantasy_df <- read.csv("./data/weekly_fantasy_points.csv")
+fantasy_df = fantasy_df[,!(names(fantasy_df) %in% c("X","X.1"))]
+points_df <-read.csv("./data/points.csv")
+sum_cols <- c(names(points_df),"FPoints")
+```
+
+```{r}
+season_df <- fantasy_df%>%
+  dplyr::group_by(PlayerID,season, position,team,full_name,age)%>%
+   dplyr::summarise_at(sum_cols, sum, na.rm=TRUE) %>%
+  dplyr::ungroup()
+```
+
+
+We are printing out a scatter plot of every player in the dataset with the X axis showing how old they are and the Y axis showing how many fantasy points they scored. Each point is a single players fantasy point production in a single year. The darker shade shows a higher density of players. When we look at the graph we see a trend of fantasy points increasing with age until they start reaching their physical peak at 27 years old and then start to decrease.
+```{r}
+plot(season_df$age,season_df$FPoints,xlab = 'Players Age',ylab = 'Fantasy Points',xlim = c(20,50),col=rgb(.6,0,0,0.065),pch=16)
+```
+
+
+We are going to create and age^2 value for each player since there seems to a be a parabolic relationship between age and fantasy points.
+```{r}
+season_df$age2 <- season_df$age^2
+```
+
+Here we are running a fixed effects model on the data to see what the coefficients of age and age^2 are. We are using a fixed effects model because we want each player to have their own intercept. This allows us to make predictions about individual players point production. We include age^2 because the graph of the relationship between age and fantasy points shows a downward facing parabola.
+```{r}
+fixed.dum <- lm(formula = FPoints ~ age + age2 +factor(position) + factor(PlayerID),data = season_df)
+```
+
+```{r}
+summary(fixed.dum)
+```
+
+With these regression results we have a way to make predictions about players fantasy point production given their previous years performance and what their age will be in the next season. We see statistically significant coefficients at the 0.001 level for both age and age^2. The negative coefficient on age^2 confirms our earlier hypothesis that age had a downard facing second degree polynomial relationship with fantasy point production.
+
+##Where To Go From Here
+The results of this project have laid the foundation for much larger and more intense fantasy football projects. Being able to change how fantasy points are calculated using the calculate_Fantasy_Points.R script allows others to adapt this model for their own fantasy leagues which use their own rule set. The next steps necessary in fantasy football analysis is comparing players against each other and deciding how much more valuable one is than another. After that is completed a linear program can be run that will produce optimal fantasy rosters.
