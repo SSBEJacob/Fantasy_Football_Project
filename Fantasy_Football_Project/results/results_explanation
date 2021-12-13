@@ -1,0 +1,11 @@
+Results Explanation
+
+In this folder we have two files.
+
+
+The first, Age-FPoints.pdf, shows the relationship between a players age and how many fantasy points they had in a given year.
+We see that a general trend of players fantasy points increasing until they reach their physical prime around age 27-29 and then see a slow decrease in pointas ofr the rest of their career. 
+
+
+The second, regression_results.html, shows the coefficients for different factors like age, age^2 and what position you play. 
+Each coefficient explains the expected change in fantasy points with a 1 year increase in age or age^2 as well as the differences in points that can be expected by players from different positions.
