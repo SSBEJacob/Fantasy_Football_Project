@@ -2,7 +2,7 @@ library(nflfastR)
 library(tidyr)
 #num_seasons lets you decide how many years worth of data you would like to use.
 #maximum is 20 and only takes integers.
-num_seasons=20
+num_seasons=3
 start_season=2022-num_seasons
 future::plan("multisession")
 parallelPBP <-nflfastR::load_pbp(start_season:2021)
